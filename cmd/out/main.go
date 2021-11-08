@@ -54,7 +54,7 @@ func main() {
 		}
 	}
 	fmt.Fprintf(os.Stderr, "source, repository: %s, tag: %s\n", request.Source.Repository, tag)
-	if err := docker.Login(request.Source.Username, request.Source.Password); err != nil {
+	if err := docker.Login(request.Source.Username, request.Source.Password, request.Source.Repository); err != nil {
 		log.Fatalf("cannot login to docker hub: %v", err)
 	}
 	manifestList := request.Source.Repository + ":" + tag

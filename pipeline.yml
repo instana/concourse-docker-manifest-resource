@@ -1,0 +1,42 @@
+
+
+resources:
+  - name: concourse-docker-manifest-resource-source
+    icon: github
+    type: git
+    source:
+      uri: https://github.com/instana/concourse-docker-manifest-resource.git
+      branch: master
+  
+  - name: concourse-docker-manifest-resource-image
+    type: registry-image
+    icon: docker
+    source:
+      repository: gcr.io/instana-agent-qa/concourse-docker-manifest-resource
+      tag: latest
+      username: _json_key
+      password: ((project-berlin-tests-gcp-instana-qa))
+
+jobs: 
+  - name: concourse-docker-manifest-resource
+    plan:
+      - get: concourse-docker-manifest-resource-source
+      - task: concourse-docker-manifest-resource-image-build
+        privileged: true
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: concourse/oci-build-task
+          inputs:
+            - name: concourse-docker-manifest-resource-source
+          outputs:
+            - name: image
+          params:
+            CONTEXT: concourse-docker-manifest-resource-source
+          run:
+            path: build
+      - put: concourse-docker-manifest-resource-image
+        params:
+          image: image/image.tar
