@@ -45,75 +45,86 @@ func main() {
 	if err := json.NewDecoder(os.Stdin).Decode(&request); err != nil {
 		log.Fatalf("cannot decode input: %v", err)
 	}
-	tag := request.Source.Tag
+	tags := []string{request.Source.Tag}
 	if request.Params.TagFile != "" {
 		var err error
-		tag, err = readTag(request.Params.TagFile)
+		tags, err = readTag(request.Params.TagFile)
 		if err != nil {
 			log.Fatalf("cannot read tag: %v", err)
 		}
 	}
-	fmt.Fprintf(os.Stderr, "source, repository: %s, tag: %s\n", request.Source.Repository, tag)
+	fmt.Fprintf(os.Stderr, "source, repository: %s, tag: %s\n", request.Source.Repository, tags)
 	if err := docker.Login(request.Source.Username, request.Source.Password, request.Source.Repository); err != nil {
 		log.Fatalf("cannot login to docker hub: %v", err)
 	}
-	manifestList := request.Source.Repository + ":" + tag
-	fmt.Fprintf(os.Stderr, "manifest list: %s\n", manifestList)
-	var manifests []string
-	var annotations []manifest.Annotation
-	var ref string
-	for _, m := range request.Params.Manifests {
-		if len(m.DigestFile) > 0 {
-			digest, err := readTag(m.DigestFile)
-			if err != nil {
-				log.Fatalf("cannot read tag: %v", err)
+
+	for _, tag := range tags {
+		manifestList := request.Source.Repository + ":" + tag
+		fmt.Fprintf(os.Stderr, "manifest list: %s\n", manifestList)
+		var manifests []string
+		var annotations []manifest.Annotation
+		var ref string
+		for _, m := range request.Params.Manifests {
+			if len(m.DigestFile) > 0 {
+				digests, err := readTag(m.DigestFile)
+				if err != nil {
+					log.Fatalf("cannot read tag: %v", err)
+				}
+				ref = request.Source.Repository + "@" + digests[0]
+			} else {
+				tags, err := readTag(m.TagFile)
+				if err != nil {
+					log.Fatalf("cannot read tag: %v", err)
+				}
+				ref = request.Source.Repository + ":" + tags[0]
 			}
-			ref = request.Source.Repository + "@" + digest
-		} else {
-			tag, err := readTag(m.TagFile)
-			if err != nil {
-				log.Fatalf("cannot read tag: %v", err)
+			annotation := manifest.Annotation{
+				Manifest:     ref,
+				Architecture: m.Arch,
+				OS:           m.OS,
+				Variant:      m.Variant,
 			}
-			ref = request.Source.Repository + ":" + tag
+			fmt.Fprintf(os.Stderr, "manifest, %#v\n", annotation)
+			manifests = append(manifests, ref)
+			annotations = append(annotations, annotation)
 		}
-		annotation := manifest.Annotation{
-			Manifest:     ref,
-			Architecture: m.Arch,
-			OS:           m.OS,
-			Variant:      m.Variant,
+		fmt.Fprintln(os.Stderr, "create manifest")
+		if err := manifest.Create(manifestList, manifests); err != nil {
+			log.Fatalf("cannot create manifest: %v", err)
 		}
-		fmt.Fprintf(os.Stderr, "manifest, %#v\n", annotation)
-		manifests = append(manifests, ref)
-		annotations = append(annotations, annotation)
-	}
-	fmt.Fprintln(os.Stderr, "create manifest")
-	if err := manifest.Create(manifestList, manifests); err != nil {
-		log.Fatalf("cannot create manifest: %v", err)
-	}
-	fmt.Fprintln(os.Stderr, "annotate manifest")
-	if err := manifest.Annotate(manifestList, annotations); err != nil {
-		log.Fatalf("cannot annotate manifest: %v", err)
-	}
-	fmt.Fprintln(os.Stderr, "push manifest")
-	digest, err := manifest.Push(manifestList)
-	if err != nil {
-		log.Fatalf("cannot push manifest: %v", err)
-	}
-	fmt.Fprintf(os.Stderr, "digest: %s\n", digest)
-	output := map[string]interface{}{
-		"version": map[string]string{
-			"digest": digest,
-		},
-	}
-	if err := json.NewEncoder(os.Stdout).Encode(output); err != nil {
-		log.Fatalf("cannot encode output: %v", err)
+		fmt.Fprintln(os.Stderr, "annotate manifest")
+		if err := manifest.Annotate(manifestList, annotations); err != nil {
+			log.Fatalf("cannot annotate manifest: %v", err)
+		}
+		fmt.Fprintln(os.Stderr, "push manifest")
+		digest, err := manifest.Push(manifestList)
+		if err != nil {
+			log.Fatalf("cannot push manifest: %v", err)
+		}
+		fmt.Fprintf(os.Stderr, "digest: %s\n", digest)
+		output := map[string]interface{}{
+			"version": map[string]string{
+				"digest": digest,
+			},
+		}
+		if err := json.NewEncoder(os.Stdout).Encode(output); err != nil {
+			log.Fatalf("cannot encode output: %v", err)
+		}
 	}
 }
 
-func readTag(filename string) (string, error) {
+func readTag(filename string) ([]string, error) {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("cannot read tag file: %v", err)
+		return nil, err
 	}
-	return strings.TrimSpace(string(b)), nil
+
+	tags := strings.Split(string(b), "\n")
+
+	for i, t := range tags {
+		tags[i] = strings.TrimSpace(t)
+	}
+
+	return tags, nil
 }
