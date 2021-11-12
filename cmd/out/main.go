@@ -123,7 +123,7 @@ func readTag(filename string) ([]string, error) {
 		return nil, err
 	}
 
-	tags := strings.Split(string(b), "\n")
+	tags := strings.Fields(string(b))
 
 	for i, t := range tags {
 		tags[i] = strings.TrimSpace(t)
