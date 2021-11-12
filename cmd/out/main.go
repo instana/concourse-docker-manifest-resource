@@ -59,6 +59,9 @@ func main() {
 	}
 
 	for _, tag := range tags {
+		if len(tag) <= 0 {
+			continue
+		}
 		manifestList := request.Source.Repository + ":" + tag
 		fmt.Fprintf(os.Stderr, "manifest list: %s\n", manifestList)
 		var manifests []string
