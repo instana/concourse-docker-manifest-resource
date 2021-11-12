@@ -58,6 +58,8 @@ func main() {
 		log.Fatalf("cannot login to docker hub: %v", err)
 	}
 
+	var output map[string]interface{}
+
 	for _, tag := range tags {
 		if len(tag) <= 0 {
 			continue
@@ -105,14 +107,15 @@ func main() {
 			log.Fatalf("cannot push manifest: %v", err)
 		}
 		fmt.Fprintf(os.Stderr, "digest: %s\n", digest)
-		output := map[string]interface{}{
+		output = map[string]interface{}{
 			"version": map[string]string{
 				"digest": digest,
 			},
 		}
-		if err := json.NewEncoder(os.Stdout).Encode(output); err != nil {
-			log.Fatalf("cannot encode output: %v", err)
-		}
+	}
+
+	if err := json.NewEncoder(os.Stdout).Encode(output); err != nil {
+		log.Fatalf("cannot encode output: %v", err)
 	}
 }
 
