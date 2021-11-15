@@ -53,9 +53,9 @@ func main() {
 			log.Fatalf("cannot read tag: %v", err)
 		}
 	}
-	fmt.Fprintf(os.Stderr, "source, repository: %s, tag: %s\n", request.Source.Repository, tags)
+	fmt.Fprintf(os.Stderr, "source, repository: %s, tags: %s\n", request.Source.Repository, tags)
 	if err := docker.Login(request.Source.Username, request.Source.Password, request.Source.Repository); err != nil {
-		log.Fatalf("cannot login to docker hub: %v", err)
+		log.Fatalf("cannot login to repository: %v", err)
 	}
 
 	var output map[string]interface{}

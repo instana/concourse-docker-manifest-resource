@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/mbialon/concourse-docker-manifest-resource/pkg/docker"
 	"github.com/mbialon/concourse-docker-manifest-resource/pkg/docker/manifest"
 )
 
@@ -33,6 +34,11 @@ func main() {
 	if err := json.NewDecoder(os.Stdin).Decode(&request); err != nil {
 		log.Fatalf("cannot decode input: %v", err)
 	}
+
+	if err := docker.Login(request.Source.Username, request.Source.Password, request.Source.Repository); err != nil {
+		log.Fatalf("cannot login to repository: %v", err)
+	}
+
 	manifestList := fmt.Sprintf("%s@%s", strings.TrimSpace(request.Source.Repository), request.Version.Digest)
 	if err := manifest.Inspect(manifestList); err != nil {
 		log.Fatalf("cannot inspect manifest: %v", err)
