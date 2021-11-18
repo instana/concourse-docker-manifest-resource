@@ -38,7 +38,7 @@ func Annotate(manifestList string, annotations []Annotation) error {
 func Push(manifestList string) (string, error) {
 	cmd := exec.Command("docker", "-D", "-l", "debug", "manifest", "push", manifestList)
 	cmd.Env = os.Environ()
-	cmd.Env = append(cmd.Env, "DOCKER_CLI_EXPERIMENTAL=disabled")
+	//cmd.Env = append(cmd.Env, "DOCKER_CLI_EXPERIMENTAL=disabled")
 	cmd.Stderr = os.Stderr
 	b, err := cmd.Output()
 	if err != nil {
