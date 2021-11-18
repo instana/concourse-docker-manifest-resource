@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -12,7 +13,8 @@ func Login(username, password string, repository string) error {
 	cmd.Stderr = os.Stderr
 
 	stdin, _ := cmd.StdinPipe()
-	stdin.Write([]byte(password))
+	cmd.Start()
 
-	return cmd.Run()
+	io.WriteString(stdin, password+"\n")
+	return cmd.Wait()
 }
